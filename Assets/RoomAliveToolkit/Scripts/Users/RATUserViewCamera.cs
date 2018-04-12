@@ -67,9 +67,18 @@ namespace RoomAliveToolkit
 
         public RATProjectionPass[] projectionLayers;
 
+        [Space(10)]
+        public float separation = 0.02169f; //Distance between cameras
+        public float convergence = 0.011f; // Use convergence to move close objects in/out of the screen
+        public Matrix4x4 originalProjection1; // needed for convergence
+        public Matrix4x4 p1;
+        public Matrix4x4 originalProjection2;
+        public Matrix4x4 p2;
+
+
         public Camera viewCamera
         {
-            get { return cam; }
+            get { return camMONO; }
         }
 
         protected int texWidth = 2048; //width of the off-screen render texture for this user view (needs to be power of 2)
@@ -86,11 +95,16 @@ namespace RoomAliveToolkit
 
         protected bool initialized = false;
         protected GameObject cameraGO;
-        protected Camera cam;
+        protected Camera cam1;
+        protected Camera cam2;
+        protected Camera camMONO;
         protected Rect rectReadRT;
         protected RATDepthMesh[] depthMeshes;
+        protected Vector3 cam1Pos;
+        protected Vector3 cam2Pos;
 
         private int toggleCam = 0;
+        private float KeyInputDelayTimer; // Keyboard input delay... quick&dirty
 
 
         public bool hasManager
@@ -107,10 +121,8 @@ namespace RoomAliveToolkit
 
             foreach (RATProjectionPass layer in projectionLayers)
                 layer.Init();
-        }
 
-        void Start()
-        {
+            Time.captureFramerate = 120;
             meshFilter = gameObject.AddComponent<MeshFilter>();
             meshRenderer = gameObject.AddComponent<MeshRenderer>();
             Shader unlitShader = Shader.Find("Unlit/Texture");
@@ -120,6 +132,41 @@ namespace RoomAliveToolkit
             meshRenderer.hideFlags = HideFlags.HideInInspector;
             meshMat.hideFlags = HideFlags.HideInInspector;
 
+            //Cam1
+            cam1 = this.GetComponent<Camera>();
+            if (cam1 == null)
+                cam1 = gameObject.AddComponent<Camera>();
+            cam1.hideFlags = HideFlags.HideInInspector;  // | HideFlags.HideInHierarchy
+
+            cam1.rect = new Rect(0, 0, 1, 1);
+            cam1.enabled = false; //important to disable this camera as we will be calling Render() directly. 
+            cam1.aspect = texWidth / texHeight;
+
+            originalProjection1 = cam1.projectionMatrix;
+            p1 = originalProjection1;
+            p1.m02 = convergence;
+            cam1.projectionMatrix = p1;
+
+            //Cam2
+            cam2 = this.GetComponent<Camera>();
+            if (cam2 == null)
+                cam2 = gameObject.AddComponent<Camera>();
+            cam2.hideFlags = HideFlags.HideInInspector;  // | HideFlags.HideInHierarchy
+
+            cam2.rect = new Rect(0, 0, 1, 1);
+            cam2.enabled = false; //important to disable this camera as we will be calling Render() directly. 
+            cam2.aspect = texWidth / texHeight;
+
+            originalProjection2 = cam2.projectionMatrix;
+            p2 = originalProjection2;
+            p2.m02 = convergence * -1;
+            cam2.projectionMatrix = p2;
+        }
+
+        void Start()
+        {
+            
+
             if (projectionManager==null)
                 projectionManager = GameObject.FindObjectOfType<RATProjectionManager>();
             if(projectionManager!=null)
@@ -128,14 +175,7 @@ namespace RoomAliveToolkit
             //Code assumes that this script is added to the camera GO 
             cameraGO = this.gameObject;
 
-            cam = this.GetComponent<Camera>();
-            if (cam == null)
-                cam = gameObject.AddComponent<Camera>();
-            cam.hideFlags = HideFlags.HideInInspector;  // | HideFlags.HideInHierarchy
-   
-            cam.rect = new Rect(0, 0, 1, 1);
-            cam.enabled = false; //important to disable this camera as we will be calling Render() directly. 
-            cam.aspect = texWidth / texHeight;
+            
 
             cameraGO.transform.localPosition = new Vector3();
 
@@ -152,16 +192,113 @@ namespace RoomAliveToolkit
             initialized = true;
         }
 
-        public void Update()
+        private void Update()
+        {
+            //Toggle Eyes
+            if (Input.GetKey(KeyCode.F1) && KeyInputDelayTimer + 0.1f < Time.time)
+            {
+                toggleCam = toggleCam = 1;
+                KeyInputDelayTimer = Time.time;
+            }
+
+            // Change Separation
+            if (Input.GetKey(KeyCode.F2) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                separation = separation - 0.0001f;
+                if (separation < 0.0f) separation = 0.0f;
+            }
+
+            if (Input.GetKey(KeyCode.F3) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                separation = separation + 0.0001f;
+                if (separation > 1.0f) separation = 1.0f;
+            }
+
+            // Change Convergence
+            if (Input.GetKey(KeyCode.F4) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                convergence = convergence + 0.0001f;
+                p1 = originalProjection1;
+                p1.m02 = convergence;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
+                p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
+            }
+
+            if (Input.GetKey(KeyCode.F5) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                convergence = convergence - 0.0001f;
+                p1 = originalProjection1;
+                p1.m02 = convergence;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
+                p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
+            }
+
+            // Change Field of View
+
+            if (Input.GetKey(KeyCode.F6) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                fieldOfView = fieldOfView - 0.1f;
+                cam1.ResetProjectionMatrix();
+                cam2.ResetProjectionMatrix();
+                cam1.fieldOfView = fieldOfView;
+                cam2.fieldOfView = fieldOfView;
+                originalProjection1 = cam1.projectionMatrix;
+                originalProjection2 = cam2.projectionMatrix;
+                p1 = originalProjection1;
+                p1.m02 = convergence;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
+                p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
+            }
+
+            if (Input.GetKey(KeyCode.F7) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                fieldOfView = fieldOfView + 0.1f;
+                cam1.ResetProjectionMatrix();
+                cam2.ResetProjectionMatrix();
+                cam1.fieldOfView = fieldOfView;
+                cam2.fieldOfView = fieldOfView;
+                originalProjection1 = cam1.projectionMatrix;
+                originalProjection2 = cam2.projectionMatrix;
+                p1 = originalProjection1;
+                p1.m02 = convergence;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
+                p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
+            }
+        }
+
+        public void FixedUpdate()
         {
             // this mostly updates the little debug view in the scene editor view
             if (debugPlaneSize < 0)
                 debugPlaneSize = 0;
 
-            cam.nearClipPlane = nearClippingPlane;
-            cam.farClipPlane = farClippingPlane;
-            cam.fieldOfView = fieldOfView;
+            //Cam1
+            cam1.nearClipPlane = nearClippingPlane;
+            cam1.farClipPlane = farClippingPlane;
+            cam1.fieldOfView = fieldOfView;
 
+            //Cam2
+            cam2.nearClipPlane = nearClippingPlane;
+            cam2.farClipPlane = farClippingPlane;
+            cam2.fieldOfView = fieldOfView;
+
+            if (Input.GetKey(KeyCode.F9)){
+                Debug.Log("FOV: "+ cam1.fieldOfView);
+            }
             meshRenderer.enabled = debugPlane != ViewDebugMode.None;
             if (meshRenderer.enabled)
             {
@@ -170,7 +307,7 @@ namespace RoomAliveToolkit
                 meshRenderer.sharedMaterial = meshMat;
 
                 float z = debugPlaneSize<= nearClippingPlane ? nearClippingPlane:debugPlaneSize;
-                float fac = Mathf.Tan(cam.fieldOfView / 2 / 180f * Mathf.PI);
+                float fac = Mathf.Tan(fieldOfView / 2 / 180f * Mathf.PI);
                 float w = z * fac;
                 float h = z * fac;
                 pos[0] = new Vector3(-w, h, nearClippingPlane);
@@ -182,59 +319,67 @@ namespace RoomAliveToolkit
                 debugPlaneM.triangles = indices;
                 meshFilter.mesh = debugPlaneM;
             }
-        }
-
-
-        public void LateUpdate()
-        {
-            if (!initialized)
-                return;
-
             RenderUserView();
-
-            // Projection mapping rendering is actually done by each of the projector cameras
-            // Setup things for the last pass which will be rendered from the perspective of the projectors (i.e., Render Pass 3)
-            // this "pass" doesn't  do any rendering at this point, but merely sets the correct shaders/materials on all 
-            // physical objects in the scene. 
         }
+
 
         /// <summary>
         /// Render both virtual and physical objects together from the perspective of the user
         /// </summary>
         public void RenderUserView()
         {
-            cam.cullingMask = virtualObjectsMask;
-            cam.backgroundColor = backgroundColor;
-            cam.targetTexture = targetRGBTexture;
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            /*if (toggleCam == 1)
+            //Cam1
+            cam1.cullingMask = virtualObjectsMask;
+            cam1.backgroundColor = backgroundColor;
+            cam1.targetTexture = targetRGBTexture;
+            cam1.clearFlags = CameraClearFlags.SolidColor;
+
+            //Cam2
+            cam2.cullingMask = virtualObjectsMask;
+            cam2.backgroundColor = backgroundColor;
+            cam2.targetTexture = targetRGBTexture;
+            cam2.clearFlags = CameraClearFlags.SolidColor;
+            
+            if (toggleCam == 1)
             {
-                Vector3 currentpos = cam.transform.localPosition;
-                cam.transform.localPosition = new Vector3(currentpos.x-0.10f,currentpos.y,currentpos.z);
                 toggleCam = 0;
+                cam1Pos = cam1.transform.localPosition;
+                cam1.transform.localPosition = new Vector3(cam1Pos.x + separation, cam1Pos.y, cam1Pos.z);
+                cam1.Render();
+                cam1.clearFlags = CameraClearFlags.Nothing;
+
+                foreach (RATProjectionPass layer in projectionLayers)
+                {
+                    if (layer.renderUserView && layer.userViewShader != null && layer.enabled)
+                    {
+                        cam1.cullingMask = layer.targetSurfaceLayers;
+                        Shader.SetGlobalColor("_ReplacementColor", realSurfaceColor);
+
+                        cam1.RenderWithShader(layer.userViewShader, null);
+                    }
+                }
+                cam1.clearFlags = CameraClearFlags.SolidColor;
             }
             else
             {
-                Vector3 currentpos = cam.transform.localPosition;
-                cam.transform.localPosition = new Vector3(currentpos.x + 0.10f, currentpos.y, currentpos.z);
                 toggleCam = 1;
-            }*/
-            cam.Render();
-
-            cam.clearFlags = CameraClearFlags.Nothing;
-
-            foreach (RATProjectionPass layer in projectionLayers)
-            {
-                if (layer.renderUserView && layer.userViewShader != null && layer.enabled)
+                cam2Pos = cam2.transform.localPosition;
+                cam2.transform.localPosition = new Vector3(cam2Pos.x - separation, cam2Pos.y, cam2Pos.z);
+                cam2.Render();
+                cam2.clearFlags = CameraClearFlags.Nothing;
+                foreach (RATProjectionPass layer in projectionLayers)
                 {
-                    cam.cullingMask = layer.targetSurfaceLayers;
-                    Shader.SetGlobalColor("_ReplacementColor", realSurfaceColor);
+                    if (layer.renderUserView && layer.userViewShader != null && layer.enabled)
+                    {
+                        cam2.cullingMask = layer.targetSurfaceLayers;
+                        Shader.SetGlobalColor("_ReplacementColor", realSurfaceColor);
 
-                    cam.RenderWithShader(layer.userViewShader, null);
-                    
+                        cam2.RenderWithShader(layer.userViewShader, null);
+
+                    }
                 }
+                cam2.clearFlags = CameraClearFlags.SolidColor;
             }
-            cam.clearFlags = CameraClearFlags.SolidColor;
         }
 
         public virtual void RenderProjection(Camera camera)
@@ -247,10 +392,10 @@ namespace RoomAliveToolkit
                 camera.cullingMask = layer.targetSurfaceLayers;
 
                 //todo preload IDs
-                Shader.SetGlobalVector("_UserViewPos", this.cam.transform.position);
+                Shader.SetGlobalVector("_UserViewPos", this.cam1.transform.position);
                 Shader.SetGlobalTexture("_UserViewPointRGB", targetRGBTexture);
                 //Shader.SetGlobalTexture("_UserViewPointDepth", targetDepthTexture);
-                Shader.SetGlobalMatrix("_UserVP", this.cam.projectionMatrix * this.cam.worldToCameraMatrix);
+                Shader.SetGlobalMatrix("_UserVP", this.cam1.projectionMatrix * this.cam1.worldToCameraMatrix);
                 camera.RenderWithShader(layer.projectionShader, null);
             }
         }

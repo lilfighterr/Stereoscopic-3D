@@ -930,7 +930,7 @@ namespace RoomAliveToolkit
                     fpsKinectDepth.Tick();
                 }
                
-                //COLOR
+                /*//COLOR
                 if (nextColorFrameReady.WaitOne(1))
                 {
 
@@ -962,7 +962,7 @@ namespace RoomAliveToolkit
                         }
                         fpsKinectAudio.Tick();
                     }
-                }
+                }*/
 
                 //SKELETON
                 if (nextSkeletonFrameReady.WaitOne(1))
@@ -978,7 +978,8 @@ namespace RoomAliveToolkit
             depthFPS = (float)fpsKinectDepth.Framerate;
             colorFPS = (float)fpsKinectColor.Framerate;
             skeletonFPS = (float)fpsKinectSkeleton.Framerate;
-            audioFPS = (float)fpsKinectAudio.Framerate;       
+            audioFPS = (float)fpsKinectAudio.Framerate;
+
         }
 
         public ShortImage GetDepthImage()
