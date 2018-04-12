@@ -48,7 +48,7 @@ namespace RoomAliveToolkit
         [Space(10)]
         
         [Space(10)]
-        public float fieldOfView = 90;
+        public float fieldOfView = 120;
         public float nearClippingPlane = 0.1f;
         public float farClippingPlane = 8f;
         public LayerMask virtualObjectsMask; //select only the layers you want to see in the user's view
@@ -105,6 +105,8 @@ namespace RoomAliveToolkit
 
         private int toggleCam = 0;
         private float KeyInputDelayTimer; // Keyboard input delay... quick&dirty
+        private bool resetCam = false;
+        private bool isOn3D = true;
 
 
         public bool hasManager
@@ -156,7 +158,7 @@ namespace RoomAliveToolkit
             cam2.rect = new Rect(0, 0, 1, 1);
             cam2.enabled = false; //important to disable this camera as we will be calling Render() directly. 
             cam2.aspect = texWidth / texHeight;
-
+       
             originalProjection2 = cam2.projectionMatrix;
             p2 = originalProjection2;
             p2.m02 = convergence * -1;
@@ -286,6 +288,13 @@ namespace RoomAliveToolkit
             if (debugPlaneSize < 0)
                 debugPlaneSize = 0;
 
+            if (!resetCam)
+            {
+                resetCam = true;
+                cam1.ResetProjectionMatrix();
+                cam2.ResetProjectionMatrix();
+            }
+
             //Cam1
             cam1.nearClipPlane = nearClippingPlane;
             cam1.farClipPlane = farClippingPlane;
@@ -296,9 +305,8 @@ namespace RoomAliveToolkit
             cam2.farClipPlane = farClippingPlane;
             cam2.fieldOfView = fieldOfView;
 
-            if (Input.GetKey(KeyCode.F9)){
-                Debug.Log("FOV: "+ cam1.fieldOfView);
-            }
+
+
             meshRenderer.enabled = debugPlane != ViewDebugMode.None;
             if (meshRenderer.enabled)
             {
@@ -340,25 +348,17 @@ namespace RoomAliveToolkit
             cam2.targetTexture = targetRGBTexture;
             cam2.clearFlags = CameraClearFlags.SolidColor;
             
+            if (isOn3D)
+            {
+
+            }
             if (toggleCam == 1)
             {
                 toggleCam = 0;
                 cam1Pos = cam1.transform.localPosition;
                 cam1.transform.localPosition = new Vector3(cam1Pos.x + separation, cam1Pos.y, cam1Pos.z);
                 cam1.Render();
-                cam1.clearFlags = CameraClearFlags.Nothing;
-
-                foreach (RATProjectionPass layer in projectionLayers)
-                {
-                    if (layer.renderUserView && layer.userViewShader != null && layer.enabled)
-                    {
-                        cam1.cullingMask = layer.targetSurfaceLayers;
-                        Shader.SetGlobalColor("_ReplacementColor", realSurfaceColor);
-
-                        cam1.RenderWithShader(layer.userViewShader, null);
-                    }
-                }
-                cam1.clearFlags = CameraClearFlags.SolidColor;
+                cam1.clearFlags = CameraClearFlags.Nothing;    
             }
             else
             {
@@ -367,19 +367,20 @@ namespace RoomAliveToolkit
                 cam2.transform.localPosition = new Vector3(cam2Pos.x - separation, cam2Pos.y, cam2Pos.z);
                 cam2.Render();
                 cam2.clearFlags = CameraClearFlags.Nothing;
-                foreach (RATProjectionPass layer in projectionLayers)
-                {
-                    if (layer.renderUserView && layer.userViewShader != null && layer.enabled)
-                    {
-                        cam2.cullingMask = layer.targetSurfaceLayers;
-                        Shader.SetGlobalColor("_ReplacementColor", realSurfaceColor);
-
-                        cam2.RenderWithShader(layer.userViewShader, null);
-
-                    }
-                }
-                cam2.clearFlags = CameraClearFlags.SolidColor;
             }
+
+            foreach (RATProjectionPass layer in projectionLayers)
+            {
+                if (layer.renderUserView && layer.userViewShader != null && layer.enabled)
+                {
+                    cam1.cullingMask = layer.targetSurfaceLayers;
+                    Shader.SetGlobalColor("_ReplacementColor", realSurfaceColor);
+
+                    cam1.RenderWithShader(layer.userViewShader, null);
+                }
+            }
+            cam1.clearFlags = CameraClearFlags.SolidColor;
+            cam2.clearFlags = CameraClearFlags.SolidColor;
         }
 
         public virtual void RenderProjection(Camera camera)
