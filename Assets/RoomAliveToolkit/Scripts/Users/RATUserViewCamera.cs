@@ -103,7 +103,7 @@ namespace RoomAliveToolkit
         protected Vector3 cam1Pos;
         protected Vector3 cam2Pos;
 
-        private int toggleCam = 0;
+        private int toggleCam = 1;
         private float KeyInputDelayTimer; // Keyboard input delay... quick&dirty
         private bool resetCam = false;
         private bool isOn3D = true;
@@ -194,13 +194,21 @@ namespace RoomAliveToolkit
             initialized = true;
         }
 
-        private void Update()
+        /*private void Update()
         {
+
+            //3D On
+            if (Input.GetKey(KeyCode.Tab) && KeyInputDelayTimer + 0.1f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                isOn3D = !isOn3D;
+            }
+
             //Toggle Eyes
             if (Input.GetKey(KeyCode.F1) && KeyInputDelayTimer + 0.1f < Time.time)
             {
-                toggleCam = toggleCam = 1;
                 KeyInputDelayTimer = Time.time;
+                toggleCam = toggleCam = 1;
             }
 
             // Change Separation
@@ -280,9 +288,9 @@ namespace RoomAliveToolkit
                 p2.m02 = convergence * -1;
                 cam2.projectionMatrix = p2;
             }
-        }
+        }*/
 
-        public void FixedUpdate()
+        public void Update()
         {
             // this mostly updates the little debug view in the scene editor view
             if (debugPlaneSize < 0)
@@ -327,7 +335,19 @@ namespace RoomAliveToolkit
                 debugPlaneM.triangles = indices;
                 meshFilter.mesh = debugPlaneM;
             }
+        }
+
+        public void LateUpdate()
+        {
+            if (!initialized)
+                return;
+
             RenderUserView();
+
+            // Projection mapping rendering is actually done by each of the projector cameras
+            // Setup things for the last pass which will be rendered from the perspective of the projectors (i.e., Render Pass 3)
+            // this "pass" doesn't  do any rendering at this point, but merely sets the correct shaders/materials on all 
+            // physical objects in the scene. 
         }
 
 
@@ -340,7 +360,7 @@ namespace RoomAliveToolkit
             cam1.cullingMask = virtualObjectsMask;
             cam1.backgroundColor = backgroundColor;
             cam1.targetTexture = targetRGBTexture;
-            cam1.clearFlags = CameraClearFlags.SolidColor;
+            
 
             //Cam2
             cam2.cullingMask = virtualObjectsMask;
@@ -350,24 +370,31 @@ namespace RoomAliveToolkit
             
             if (isOn3D)
             {
-
-            }
-            if (toggleCam == 1)
-            {
-                toggleCam = 0;
-                cam1Pos = cam1.transform.localPosition;
-                cam1.transform.localPosition = new Vector3(cam1Pos.x + separation, cam1Pos.y, cam1Pos.z);
-                cam1.Render();
-                cam1.clearFlags = CameraClearFlags.Nothing;    
+                if (toggleCam == 1)
+                {
+                    toggleCam = 0;
+                    cam1Pos = cam1.transform.localPosition;
+                    cam1.transform.localPosition = new Vector3(cam1Pos.x + separation, cam1Pos.y, cam1Pos.z);
+                    cam1.clearFlags = CameraClearFlags.SolidColor;
+                    cam1.Render();
+                    cam1.clearFlags = CameraClearFlags.Nothing;
+                }
+                else
+                {
+                    toggleCam = 1;
+                    cam2Pos = cam2.transform.localPosition;
+                    cam2.transform.localPosition = new Vector3(cam2Pos.x - separation, cam2Pos.y, cam2Pos.z);
+                    cam2.Render();
+                    cam2.clearFlags = CameraClearFlags.Nothing;
+                }
             }
             else
             {
-                toggleCam = 1;
-                cam2Pos = cam2.transform.localPosition;
-                cam2.transform.localPosition = new Vector3(cam2Pos.x - separation, cam2Pos.y, cam2Pos.z);
-                cam2.Render();
-                cam2.clearFlags = CameraClearFlags.Nothing;
+
+                cam1.Render();
+                cam1.clearFlags = CameraClearFlags.Nothing;
             }
+            
 
             foreach (RATProjectionPass layer in projectionLayers)
             {
