@@ -55,6 +55,11 @@ namespace RoomAliveToolkit
         /// </summary>
         public bool CastShadows = false;
 
+        /// <summary>
+        /// Collider.
+        /// </summary>
+        public Collider meshCollider;
+
         // ****************************
         // Private Member Variables
         // ****************************

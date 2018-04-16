@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 
 
 namespace RoomAliveToolkit
@@ -108,7 +109,7 @@ namespace RoomAliveToolkit
         private bool resetCam = false;
         private bool isOn3D = true;
 
-
+        
         public bool hasManager
         {
             get
@@ -119,12 +120,11 @@ namespace RoomAliveToolkit
 
         void Awake()
         {
+            QualitySettings.vSyncCount = 1;
             projectionLayers = gameObject.GetComponents<RATProjectionPass>();
 
             foreach (RATProjectionPass layer in projectionLayers)
                 layer.Init();
-
-            Time.captureFramerate = 120;
             meshFilter = gameObject.AddComponent<MeshFilter>();
             meshRenderer = gameObject.AddComponent<MeshRenderer>();
             Shader unlitShader = Shader.Find("Unlit/Texture");
@@ -167,8 +167,6 @@ namespace RoomAliveToolkit
 
         void Start()
         {
-            
-
             if (projectionManager==null)
                 projectionManager = GameObject.FindObjectOfType<RATProjectionManager>();
             if(projectionManager!=null)
@@ -194,107 +192,13 @@ namespace RoomAliveToolkit
             initialized = true;
         }
 
-        /*private void Update()
-        {
-
-            //3D On
-            if (Input.GetKey(KeyCode.Tab) && KeyInputDelayTimer + 0.1f < Time.time)
-            {
-                KeyInputDelayTimer = Time.time;
-                isOn3D = !isOn3D;
-            }
-
-            //Toggle Eyes
-            if (Input.GetKey(KeyCode.F1) && KeyInputDelayTimer + 0.1f < Time.time)
-            {
-                KeyInputDelayTimer = Time.time;
-                toggleCam = toggleCam = 1;
-            }
-
-            // Change Separation
-            if (Input.GetKey(KeyCode.F2) && KeyInputDelayTimer + 0.02f < Time.time)
-            {
-                KeyInputDelayTimer = Time.time;
-                separation = separation - 0.0001f;
-                if (separation < 0.0f) separation = 0.0f;
-            }
-
-            if (Input.GetKey(KeyCode.F3) && KeyInputDelayTimer + 0.02f < Time.time)
-            {
-                KeyInputDelayTimer = Time.time;
-                separation = separation + 0.0001f;
-                if (separation > 1.0f) separation = 1.0f;
-            }
-
-            // Change Convergence
-            if (Input.GetKey(KeyCode.F4) && KeyInputDelayTimer + 0.02f < Time.time)
-            {
-                KeyInputDelayTimer = Time.time;
-                convergence = convergence + 0.0001f;
-                p1 = originalProjection1;
-                p1.m02 = convergence;
-                cam1.projectionMatrix = p1;
-                p2 = originalProjection2;
-                p2.m02 = convergence * -1;
-                cam2.projectionMatrix = p2;
-            }
-
-            if (Input.GetKey(KeyCode.F5) && KeyInputDelayTimer + 0.02f < Time.time)
-            {
-                KeyInputDelayTimer = Time.time;
-                convergence = convergence - 0.0001f;
-                p1 = originalProjection1;
-                p1.m02 = convergence;
-                cam1.projectionMatrix = p1;
-                p2 = originalProjection2;
-                p2.m02 = convergence * -1;
-                cam2.projectionMatrix = p2;
-            }
-
-            // Change Field of View
-
-            if (Input.GetKey(KeyCode.F6) && KeyInputDelayTimer + 0.02f < Time.time)
-            {
-                KeyInputDelayTimer = Time.time;
-                fieldOfView = fieldOfView - 0.1f;
-                cam1.ResetProjectionMatrix();
-                cam2.ResetProjectionMatrix();
-                cam1.fieldOfView = fieldOfView;
-                cam2.fieldOfView = fieldOfView;
-                originalProjection1 = cam1.projectionMatrix;
-                originalProjection2 = cam2.projectionMatrix;
-                p1 = originalProjection1;
-                p1.m02 = convergence;
-                cam1.projectionMatrix = p1;
-                p2 = originalProjection2;
-                p2.m02 = convergence * -1;
-                cam2.projectionMatrix = p2;
-            }
-
-            if (Input.GetKey(KeyCode.F7) && KeyInputDelayTimer + 0.02f < Time.time)
-            {
-                KeyInputDelayTimer = Time.time;
-                fieldOfView = fieldOfView + 0.1f;
-                cam1.ResetProjectionMatrix();
-                cam2.ResetProjectionMatrix();
-                cam1.fieldOfView = fieldOfView;
-                cam2.fieldOfView = fieldOfView;
-                originalProjection1 = cam1.projectionMatrix;
-                originalProjection2 = cam2.projectionMatrix;
-                p1 = originalProjection1;
-                p1.m02 = convergence;
-                cam1.projectionMatrix = p1;
-                p2 = originalProjection2;
-                p2.m02 = convergence * -1;
-                cam2.projectionMatrix = p2;
-            }
-        }*/
-
         public void Update()
         {
             // this mostly updates the little debug view in the scene editor view
             if (debugPlaneSize < 0)
                 debugPlaneSize = 0;
+
+            KeyInputs();
 
             if (!resetCam)
             {
@@ -427,5 +331,103 @@ namespace RoomAliveToolkit
                 camera.RenderWithShader(layer.projectionShader, null);
             }
         }
-    }
+
+        private void KeyInputs()
+        {
+
+            //3D On
+            if (Input.GetKey(KeyCode.Tab) && KeyInputDelayTimer + 0.1f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                isOn3D = !isOn3D;
+            }
+
+            //Toggle Eyes
+            if (Input.GetKey(KeyCode.F1) && KeyInputDelayTimer + 0.1f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                toggleCam = toggleCam = 1;
+            }
+
+            // Change Separation
+            if (Input.GetKey(KeyCode.F2) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                separation = separation - 0.0001f;
+                if (separation < 0.0f) separation = 0.0f;
+            }
+
+            if (Input.GetKey(KeyCode.F3) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                separation = separation + 0.0001f;
+                if (separation > 1.0f) separation = 1.0f;
+            }
+
+            // Change Convergence
+            if (Input.GetKey(KeyCode.F4) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                convergence = convergence + 0.0001f;
+                p1 = originalProjection1;
+                p1.m02 = convergence;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
+                p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
+            }
+
+            if (Input.GetKey(KeyCode.F5) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                convergence = convergence - 0.0001f;
+                p1 = originalProjection1;
+                p1.m02 = convergence;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
+                p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
+            }
+
+            // Change Field of View
+
+            if (Input.GetKey(KeyCode.F6) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                fieldOfView = fieldOfView - 0.1f;
+                cam1.ResetProjectionMatrix();
+                cam2.ResetProjectionMatrix();
+                cam1.fieldOfView = fieldOfView;
+                cam2.fieldOfView = fieldOfView;
+                originalProjection1 = cam1.projectionMatrix;
+                originalProjection2 = cam2.projectionMatrix;
+                p1 = originalProjection1;
+                p1.m02 = convergence;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
+                p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
+            }
+
+            if (Input.GetKey(KeyCode.F7) && KeyInputDelayTimer + 0.02f < Time.time)
+            {
+                KeyInputDelayTimer = Time.time;
+                fieldOfView = fieldOfView + 0.1f;
+                cam1.ResetProjectionMatrix();
+                cam2.ResetProjectionMatrix();
+                cam1.fieldOfView = fieldOfView;
+                cam2.fieldOfView = fieldOfView;
+                originalProjection1 = cam1.projectionMatrix;
+                originalProjection2 = cam2.projectionMatrix;
+                p1 = originalProjection1;
+                p1.m02 = convergence;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
+                p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
+            }
+        }
+        }
+
+
 }

@@ -930,7 +930,7 @@ namespace RoomAliveToolkit
                     fpsKinectDepth.Tick();
                 }
                
-                /*//COLOR
+                //COLOR
                 if (nextColorFrameReady.WaitOne(1))
                 {
 
@@ -943,7 +943,7 @@ namespace RoomAliveToolkit
                     fpsKinectColor.Tick();
                 }
                 
-                //AUDIO
+                /*//AUDIO
                 if (nextAudioFrameReady.WaitOne(1))
                 {
                     AudioFrame frame;
