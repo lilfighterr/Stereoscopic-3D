@@ -54,12 +54,7 @@ namespace RoomAliveToolkit
         /// Used in lighting calculations on whether this mesh should cast shadows. 
         /// </summary>
         public bool CastShadows = false;
-
-        /// <summary>
-        /// Collider.
-        /// </summary>
-        public Collider meshCollider;
-
+        
         // ****************************
         // Private Member Variables
         // ****************************
@@ -79,6 +74,8 @@ namespace RoomAliveToolkit
         private MeshRenderer[] meshRenderers;
 
         private GameObject[] gameObjects;
+
+        private MeshCollider[] meshColliders;
 
         private int depthTableUpdateCount = 0;
 
@@ -160,6 +157,7 @@ namespace RoomAliveToolkit
                 meshRenderers = new MeshRenderer[numTiles];
 
             gameObjects = new GameObject[numTiles];
+            meshColliders = new MeshCollider[numTiles];
 
             for (int i = 0; i < numTiles; i++)
             {
@@ -179,13 +177,13 @@ namespace RoomAliveToolkit
 
                 meshFilters[i] = (MeshFilter)gameObjects[i].AddComponent(typeof(MeshFilter));
                     meshRenderers[i] = (MeshRenderer)gameObjects[i].AddComponent(typeof(MeshRenderer));
+                meshColliders[i] = (MeshCollider)gameObjects[i].AddComponent(typeof(MeshCollider));
 
                 meshes[i] = new Mesh();
                 meshes[i].vertices = verts;
                 meshes[i].subMeshCount = 1;
                 meshes[i].uv = texCoords;
                 meshes[i].normals = normals;
-
 
                 //if (isPoints)
                 //    meshes[i].SetIndices(indices, MeshTopology.Points, 0);
@@ -201,7 +199,8 @@ namespace RoomAliveToolkit
                 meshRenderers[i].material = surfaceMaterial; //default material 
                 meshRenderers[i].receiveShadows = ReceiveShadows;
                 meshRenderers[i].shadowCastingMode = CastShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
-                
+
+                //meshColliders[i].sharedMesh = meshes[i];
             }
         }
 
@@ -273,7 +272,7 @@ namespace RoomAliveToolkit
                 surfaceMaterial.SetTexture("_DepthToCameraSpaceX", depthToCameraSpaceX);
                 surfaceMaterial.SetTexture("_DepthToCameraSpaceY", depthToCameraSpaceY);
             }
-
+            
             surfaceMaterial.SetMatrix("_IRIntrinsics", kinectClient.IR_Intrinsics); //these can change when the KinectV2Client updates them from default values
             surfaceMaterial.SetMatrix("_RGBIntrinsics", kinectClient.RGB_Intrinsics);
             surfaceMaterial.SetMatrix("_RGBExtrinsics", kinectClient.RGB_Extrinsics);
