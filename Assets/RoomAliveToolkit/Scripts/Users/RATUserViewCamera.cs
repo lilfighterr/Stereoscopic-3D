@@ -49,7 +49,7 @@ namespace RoomAliveToolkit
         [Space(10)]
         
         [Space(10)]
-        public float fieldOfView = 140;
+        public float fieldOfView = 120;
         public float nearClippingPlane = 0.1f;
         public float farClippingPlane = 8f;
         public LayerMask virtualObjectsMask; //select only the layers you want to see in the user's view
@@ -107,7 +107,7 @@ namespace RoomAliveToolkit
         private int toggleCam = 1;
         private float KeyInputDelayTimer; // Keyboard input delay... quick&dirty
         private bool resetCam = false;
-        private bool isOn3D = false;
+        private bool isOn3D = true;
 
         
         public bool hasManager
@@ -144,25 +144,25 @@ namespace RoomAliveToolkit
             cam1.enabled = false; //important to disable this camera as we will be calling Render() directly. 
             cam1.aspect = texWidth / texHeight;
 
-            if (!resetCam)
-            {
-                resetCam = true;
-                cam1.ResetProjectionMatrix();
-            }
-            cam1.nearClipPlane = nearClippingPlane;
-            cam1.farClipPlane = farClippingPlane;
-            cam1.fieldOfView = fieldOfView;
-
             originalProjection1 = cam1.projectionMatrix;
-            p1 = p2 = originalProjection1;
-
-            //Right
+            p1 = originalProjection1;
             p1.m02 = convergence;
-            
+            cam1.projectionMatrix = p1;
 
-            //Left
+            //Cam2
+            cam2 = this.GetComponent<Camera>();
+            if (cam2 == null)
+                cam2 = gameObject.AddComponent<Camera>();
+            cam2.hideFlags = HideFlags.HideInInspector;  // | HideFlags.HideInHierarchy
+
+            cam2.rect = new Rect(0, 0, 1, 1);
+            cam2.enabled = false; //important to disable this camera as we will be calling Render() directly. 
+            cam2.aspect = texWidth / texHeight;
+       
+            originalProjection2 = cam2.projectionMatrix;
+            p2 = originalProjection2;
             p2.m02 = convergence * -1;
-            
+            cam2.projectionMatrix = p2;
         }
 
         void Start()
@@ -200,12 +200,24 @@ namespace RoomAliveToolkit
 
             KeyInputs();
 
-
+            if (!resetCam)
+            {
+                resetCam = true;
+                cam1.ResetProjectionMatrix();
+                cam2.ResetProjectionMatrix();
+            }
 
             //Cam1
             cam1.nearClipPlane = nearClippingPlane;
             cam1.farClipPlane = farClippingPlane;
             cam1.fieldOfView = fieldOfView;
+
+            //Cam2
+            cam2.nearClipPlane = nearClippingPlane;
+            cam2.farClipPlane = farClippingPlane;
+            cam2.fieldOfView = fieldOfView;
+
+
 
             meshRenderer.enabled = debugPlane != ViewDebugMode.None;
             if (meshRenderer.enabled)
@@ -248,33 +260,45 @@ namespace RoomAliveToolkit
         /// </summary>
         public void RenderUserView()
         {
-            cam1Pos = cam1.transform.localPosition;
+            //Cam1
+            cam1.cullingMask = virtualObjectsMask;
+            cam1.backgroundColor = backgroundColor;
+            cam1.targetTexture = targetRGBTexture;
+            
+
+            //Cam2
+            cam2.cullingMask = virtualObjectsMask;
+            cam2.backgroundColor = backgroundColor;
+            cam2.targetTexture = targetRGBTexture;
+            cam2.clearFlags = CameraClearFlags.SolidColor;
+            
             if (isOn3D)
             {
-                if (toggleCam == 1) //Cam1
+                if (toggleCam == 1)
                 {
                     toggleCam = 0;
+                    cam1Pos = cam1.transform.localPosition;
                     cam1.transform.localPosition = new Vector3(cam1Pos.x + separation, cam1Pos.y, cam1Pos.z);
-                    cam1.projectionMatrix = p1;
-
+                    cam1.clearFlags = CameraClearFlags.SolidColor;
+                    cam1.Render();
+                    cam1.clearFlags = CameraClearFlags.Nothing;
                 }
-                else //Cam2
+                else
                 {
                     toggleCam = 1;
-                    cam1.transform.localPosition = new Vector3(cam1Pos.x - separation, cam1Pos.y, cam1Pos.z);
-                    cam1.projectionMatrix = p2;
+                    cam2Pos = cam2.transform.localPosition;
+                    cam2.transform.localPosition = new Vector3(cam2Pos.x - separation, cam2Pos.y, cam2Pos.z);
+                    cam2.Render();
+                    cam2.clearFlags = CameraClearFlags.Nothing;
                 }
             }
             else
             {
-                
+
+                cam1.Render();
+                cam1.clearFlags = CameraClearFlags.Nothing;
             }
-            cam1.cullingMask = virtualObjectsMask;
-            cam1.backgroundColor = backgroundColor;
-            cam1.targetTexture = targetRGBTexture;
-            cam1.clearFlags = CameraClearFlags.SolidColor;
-            cam1.Render();
-            cam1.clearFlags = CameraClearFlags.Nothing;
+            
 
             foreach (RATProjectionPass layer in projectionLayers)
             {
@@ -287,6 +311,7 @@ namespace RoomAliveToolkit
                 }
             }
             cam1.clearFlags = CameraClearFlags.SolidColor;
+            cam2.clearFlags = CameraClearFlags.SolidColor;
         }
 
         public virtual void RenderProjection(Camera camera)
@@ -346,8 +371,10 @@ namespace RoomAliveToolkit
                 convergence = convergence + 0.0001f;
                 p1 = originalProjection1;
                 p1.m02 = convergence;
-                p2 = originalProjection1;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
                 p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
             }
 
             if (Input.GetKey(KeyCode.F5) && KeyInputDelayTimer + 0.02f < Time.time)
@@ -356,8 +383,10 @@ namespace RoomAliveToolkit
                 convergence = convergence - 0.0001f;
                 p1 = originalProjection1;
                 p1.m02 = convergence;
-                p2 = originalProjection1;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
                 p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
             }
 
             // Change Field of View
@@ -367,12 +396,17 @@ namespace RoomAliveToolkit
                 KeyInputDelayTimer = Time.time;
                 fieldOfView = fieldOfView - 0.1f;
                 cam1.ResetProjectionMatrix();
+                cam2.ResetProjectionMatrix();
                 cam1.fieldOfView = fieldOfView;
+                cam2.fieldOfView = fieldOfView;
                 originalProjection1 = cam1.projectionMatrix;
+                originalProjection2 = cam2.projectionMatrix;
                 p1 = originalProjection1;
                 p1.m02 = convergence;
-                p2 = originalProjection1;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
                 p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
             }
 
             if (Input.GetKey(KeyCode.F7) && KeyInputDelayTimer + 0.02f < Time.time)
@@ -380,12 +414,17 @@ namespace RoomAliveToolkit
                 KeyInputDelayTimer = Time.time;
                 fieldOfView = fieldOfView + 0.1f;
                 cam1.ResetProjectionMatrix();
+                cam2.ResetProjectionMatrix();
                 cam1.fieldOfView = fieldOfView;
+                cam2.fieldOfView = fieldOfView;
                 originalProjection1 = cam1.projectionMatrix;
+                originalProjection2 = cam2.projectionMatrix;
                 p1 = originalProjection1;
                 p1.m02 = convergence;
-                p2 = originalProjection1;
+                cam1.projectionMatrix = p1;
+                p2 = originalProjection2;
                 p2.m02 = convergence * -1;
+                cam2.projectionMatrix = p2;
             }
         }
         }
