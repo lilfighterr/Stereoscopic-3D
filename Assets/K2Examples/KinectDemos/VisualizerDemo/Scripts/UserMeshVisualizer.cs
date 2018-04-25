@@ -28,6 +28,8 @@ public class UserMeshVisualizer : MonoBehaviour
 	[Tooltip("Number of pixels per direction in a sample.")]
 	private const int sampleSize = 2;
 
+    public RoomAliveToolkit.RATUser ratUser;
+
 
     private Mesh mesh;
     private Vector3[] vertices;
@@ -151,7 +153,7 @@ public class UserMeshVisualizer : MonoBehaviour
 			}
 
 			// set transform position
-			Vector3 newUserPos = userMeshPos + originPosition; // manager.GetJointPosition(userId, (int)KinectInterop.JointType.SpineBase) + originPosition;
+			Vector3 newUserPos = ratUser.getHeadPosition(); // manager.GetJointPosition(userId, (int)KinectInterop.JointType.SpineBase) + originPosition;
 			
 			if(invertedZMovement)
 			{

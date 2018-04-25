@@ -62,7 +62,10 @@ namespace RoomAliveToolkit
         public bool StreamColor = true;
         public bool StreamSkeleton = true;
         public bool StreamAudio = false;
-       
+
+        // primary SensorData structure
+        protected KinectInterop.SensorData sensorData = null;
+
         [Space(10)]
         // FPS computation (these will not be visible in the inspector)
         private FrameRate fpsUpdate = new FrameRate(1f);
@@ -82,6 +85,7 @@ namespace RoomAliveToolkit
         public float skeletonFPS = 0;
         [ReadOnly]
         public float audioFPS = 0;
+
 
 
         /// <summary>
@@ -284,7 +288,7 @@ namespace RoomAliveToolkit
         {
             get { return streamingMode == FileStreamingMode.Write; }
         }
-
+    
         public void LoadCalibrationData()
         {
             if (HasCalibration())
