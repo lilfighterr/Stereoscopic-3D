@@ -7,6 +7,7 @@
 /Assets/AssetStoreTools*
 /Assets/CSV/
 /Trial_Data/
+/TrialNoKey_Data/
 
 # Visual Studio 2015 cache directory
 /.vs/
@@ -28,6 +29,7 @@ ExportedObj/
 
 # Unity3D generated meta files
 *.pidb.meta
+*.meta
 
 # Unity3D Generated File On Crash Reports
 sysinfo.txt
